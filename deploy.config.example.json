@@ -1,0 +1,22 @@
+{
+  "volcengine": {
+    "accessKeyId": "YOUR_ACCESS_KEY_ID",
+    "secretAccessKey": "YOUR_SECRET_ACCESS_KEY",
+    "region": "cn-beijing"
+  },
+  "registry": {
+    "url": "ai-image-cn-beijing.cr.volces.com",
+    "namespace": "ai-image"
+  },
+  "functions": {
+    "api": {
+      "id": "YOUR_API_FUNCTION_ID",
+      "name": "liminian"
+    },
+    "worker": {
+      "id": "YOUR_WORKER_FUNCTION_ID",
+      "name": "liminian-worker"
+    }
+  }
+}
+
