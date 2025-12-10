@@ -56,16 +56,20 @@ export function MainMenu() {
   useEffect(() => {
     if (screen !== 'deploy_version' || !config) return;
     
-    const serviceNames = Object.keys(config.services);
-    if (serviceNames.length === 0) return;
+    // 使用已选中的服务，如果没有则取第一个
+    const targetServices = selectedServices.length > 0 
+      ? selectedServices 
+      : Object.keys(config.services);
+    
+    if (targetServices.length === 0) return;
     
     // 避免重复查询
     if (versionInfo.loading) return;
     
     setVersionInfo(prev => ({ ...prev, loading: true }));
     
-    // 取第一个服务来查询版本
-    const firstService = serviceNames[0];
+    // 取第一个选中的服务来查询版本
+    const firstService = targetServices[0];
     const service = config.services[firstService];
     const imageRef = `${config.registry.url}/${config.registry.namespace}/${service.imageName}`;
     
@@ -89,7 +93,7 @@ export function MainMenu() {
         setVersion(prev => prev || suggested);
       }
     });
-  }, [screen]);
+  }, [screen, selectedServices]);
 
   const handleMainMenuSelect = useCallback((item: { value: string }) => {
     // 清除之前的消息
@@ -99,8 +103,13 @@ export function MainMenu() {
       case 'deploy':
         if (!configPath) {
           setScreen('init');
-        } else {
+        } else if (services.length <= 1) {
+          // 只有一个服务，直接进入版本输入
+          setSelectedServices(services);
           setScreen('deploy_version');
+        } else {
+          // 多个服务，先选择服务
+          setScreen('deploy_service');
         }
         break;
       case 'build':
@@ -133,47 +142,35 @@ export function MainMenu() {
         exit();
         break;
     }
-  }, [configPath, config, exit]);
+  }, [configPath, config, services, exit]);
 
   const handleVersionSubmit = useCallback(() => {
     if (!version.trim()) return;
     
-    // 如果只有一个服务，直接部署
-    if (services.length <= 1) {
-      const versions: Record<string, string> = {};
-      services.forEach(s => { versions[s] = version; });
-      
-      setDeployOptions({
-        services: undefined,
-        versions,
-        skipBuild: false,
-        skipPush: false,
-        dryRun: false,
-      });
-      setScreen('deploying');
-    } else {
-      setScreen('deploy_service');
-    }
-  }, [version, services]);
-
-  const handleServiceSelect = useCallback((item: { value: string }) => {
+    // 使用已选中的服务开始部署
+    const targetServices = selectedServices.length > 0 ? selectedServices : services;
     const versions: Record<string, string> = {};
+    targetServices.forEach(s => { versions[s] = version; });
     
-    if (item.value === 'all') {
-      services.forEach(s => { versions[s] = version; });
-    } else {
-      versions[item.value] = version;
-    }
-
     setDeployOptions({
-      services: item.value === 'all' ? undefined : [item.value],
+      services: targetServices.length === services.length ? undefined : targetServices,
       versions,
       skipBuild: false,
       skipPush: false,
       dryRun: false,
     });
     setScreen('deploying');
-  }, [version, services]);
+  }, [version, services, selectedServices]);
+
+  const handleServiceSelect = useCallback((item: { value: string }) => {
+    // 记住选中的服务，然后进入版本输入界面
+    if (item.value === 'all') {
+      setSelectedServices(services);
+    } else {
+      setSelectedServices([item.value]);
+    }
+    setScreen('deploy_version');
+  }, [services]);
 
   useInput((input, key) => {
     if (key.escape) {
@@ -182,6 +179,7 @@ export function MainMenu() {
       } else {
         setScreen('main');
         setVersion('');
+        setSelectedServices([]);
         setVersionInfo({ loading: false, latest: null, suggested: 'v0.0.1' });
       }
     }
@@ -294,13 +292,23 @@ export function MainMenu() {
       {/* 版本输入 */}
       {screen === 'deploy_version' && (
         <Box flexDirection="column">
+          {/* 显示选中的服务 */}
+          <Box marginBottom={1}>
+            <Text color="gray">🎯 部署服务: </Text>
+            <Text color="cyan" bold>
+              {selectedServices.length === services.length 
+                ? '全部服务' 
+                : selectedServices.join(', ')}
+            </Text>
+          </Box>
+          
           {/* 版本信息提示 */}
           {versionInfo.loading ? (
             <Box marginBottom={1}>
               <Text color="cyan">
                 <Spinner type="dots" />
               </Text>
-              <Text color="gray"> 正在查询远端最新版本...</Text>
+              <Text color="gray"> 正在查询 {selectedServices[0]} 的远端最新版本...</Text>
             </Box>
           ) : versionInfo.error ? (
             <Box marginBottom={1}>
