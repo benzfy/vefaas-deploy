@@ -1,6 +1,6 @@
 {
   "name": "vefaas-deploy",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Build and deploy to Volcengine FaaS (veFaaS) - Generic CLI tool",
   "type": "module",
   "license": "MIT",
@@ -49,4 +49,3 @@
     "typescript": "^5.7.2"
   }
 }
-
